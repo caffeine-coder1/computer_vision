@@ -1,13 +1,41 @@
 import gzip
 import pickle
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from pathlib import Path
 import torch
 from torchvision.transforms import transforms
 from PIL import Image
+import copy
+from general import select_device, set_logger
+import gc
+import torchvision
+
+train_transforms = transforms.Compose([
+    transforms.Resize(38),
+    transforms.RandomRotation(5),
+    transforms.RandomCrop(32, padding=2),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.13], std=[0.3081])
+])
+
+test_transforms = transforms.Compose([
+    transforms.Resize(32),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.13], std=[0.3081])
+])
 
 
 class MNISTDataset(Dataset):
+    """This class provides the required data sets with transforms applied to it
+        when its 'getitem'  method is called.
+
+        Args:
+                dir: directory in which the pickle file is located.
+                test: boolean value. True for testset, false for Trainset
+                transforms: a compose or single instance of
+                            Torchvision.transforms
+    """
+
     def __init__(self, dir='data/mnist.pkl.gz', test=False, transforms=None):
         super().__init__()
         self.dir = str(Path(dir).resolve())
@@ -21,10 +49,10 @@ class MNISTDataset(Dataset):
             data = pickle.load(f, encoding='bytes')
             (x_train, y_train), (x_test, y_test) = data
         if self.test:
-            print(f'loading test set with {x_test.shape[0]} examples')
+            logger.info(f'loading test set with {x_test.shape[0]} examples')
             return x_test, y_test
         else:
-            print(f'loading train set with {x_train.shape[0]} examples')
+            logger.info(f'loading train set with {x_train.shape[0]} examples')
             return x_train, y_train
 
     def __len__(self):
@@ -38,36 +66,59 @@ class MNISTDataset(Dataset):
         return x, y
 
 
-train_transforms = transforms.Compose([
-    transforms.RandomRotation(5),
-    transforms.RandomCrop(28, padding=2),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.13], std=[0.3081])
-])
-
-test_transforms = transforms.Compose([
-    transforms.RandomCrop(28, padding=2),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.13], std=[0.3081])
-])
+def random_split_data_set(dataset, r=0.9):
+    train_n = int(len(dataset)*r)
+    val_n = int(len(dataset)) - train_n
+    train_d, val_d = random_split(dataset, [train_n, val_n])
+    return train_d, val_d
 
 
 def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64):
-    train_data = MNISTDataset(dir=dir, transforms=train_transforms)
+    """Returns 3 DataLoader instances namely train, val and test data loaders.
+
+            Args:
+                    dir: directory in which the pickle file is located.
+                    batch_size: How many instances you want to load at once.
+    """
+    data = MNISTDataset(dir=dir, transforms=train_transforms)
+    train_data, val_data = random_split_data_set(data, r=0.9)
     test_data = MNISTDataset(dir=dir, test=True, transforms=test_transforms)
+
+    val_data = copy.deepcopy(val_data)
+    val_data.transforms = test_transforms
+
     train_data_loader = DataLoader(train_data, batch_size, True)
+    val_data_loader = DataLoader(val_data, batch_size, False)
     test_data_loader = DataLoader(test_data, batch_size, False)
-    return train_data_loader, test_data_loader
+
+    return train_data_loader, val_data_loader, test_data_loader
 
 
 if __name__ == '__main__':
-    train_data, test_data = get_data_loaders()
+    device = select_device({})
+    logger = set_logger(__name__)
+    train_data, val_data, test_data = get_data_loaders(batch_size=4)
 
     for x, y in train_data:
+        x = x.to(device)
+        y = y.to(device)
         print(x.shape)
         print(y.shape)
+        torchvision.utils.save_image(x, 'train.png')
+        break
+    for x, y in val_data:
+        x = x.to(device)
+        y = y.to(device)
+        print(x.shape)
+        print(y.shape)
+        torchvision.utils.save_image(x, 'val.png')
         break
     for x, y in test_data:
+        x = x.to(device)
+        y = y.to(device)
         print(x.shape)
         print(y.shape)
+        torchvision.utils.save_image(x, 'test.png')
         break
+
+    gc.collect()
