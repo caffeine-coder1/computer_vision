@@ -1,0 +1,10 @@
+{
+    "python.pythonPath": "/home/sk/etc/miniconda/envs/cv/bin/python",
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.enabled": true,
+    "cSpell.words": [
+        "MNIST",
+        "unsqueeze"
+    ]
+}
