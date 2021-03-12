@@ -10,6 +10,8 @@ from general import select_device, set_logger
 import gc
 import torchvision
 
+logger = set_logger(__name__)
+
 train_transforms = transforms.Compose([
     transforms.Resize(38),
     transforms.RandomRotation(5),
@@ -60,7 +62,7 @@ class MNISTDataset(Dataset):
 
     def __getitem__(self, idx):
         x = Image.fromarray(self.dataset[0][idx])
-        y = torch.tensor(self.dataset[1][idx]).unsqueeze(0)
+        y = torch.tensor(self.dataset[1][idx], dtype=torch.long)
         if self.transforms:
             x = self.transforms(x)
         return x, y
@@ -78,7 +80,7 @@ def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64):
 
             Args:
                     dir: directory in which the pickle file is located.
-                    batch_size: How many instances you want to load at once.
+                    batch_size: How many samples you want to load at once.
     """
     data = MNISTDataset(dir=dir, transforms=train_transforms)
     train_data, val_data = random_split_data_set(data, r=0.9)
@@ -96,7 +98,6 @@ def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64):
 
 if __name__ == '__main__':
     device = select_device({})
-    logger = set_logger(__name__)
     train_data, val_data, test_data = get_data_loaders(batch_size=4)
 
     for x, y in train_data:
