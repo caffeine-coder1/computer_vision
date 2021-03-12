@@ -21,7 +21,7 @@ def setSeed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-def incremental_folder_name(base_dir='run', folder='train'):
+def incremental_folder_name(base_dir='run', folder='train', need_path=True):
     """Creates a Folder and returns its path in base_dir/folder_{increment} format.
 
         Args:
@@ -34,9 +34,12 @@ def incremental_folder_name(base_dir='run', folder='train'):
     i = 1
     while Path(f'{base_dir}/{folder}_{i}').resolve().exists():
         i += 1
-    p = Path(f'{base_dir}/{folder}_{i}').resolve()
+    p = Path(f'{base_dir}/{folder}_{i}')
     p.mkdir(parents=True)
-    return str(p)
+    if need_path:
+        return str(p)
+    else:
+        return f'{folder}_{i}'
 
 
 def incremental_filename(baseDir='run', name='predictions', ext='png'):

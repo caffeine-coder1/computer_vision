@@ -27,9 +27,9 @@ def training(model, model_name, train, val, test, optimizer, criteria,
     """
 
     if tensorboard:
-        summary_name = incremental_folder_name(
+        summary_path = incremental_folder_name(
             base_dir='logs', folder=model_name)
-        summary = SummaryWriter(summary_name)
+        summary = SummaryWriter(summary_path)
 
     lowest_loss = float('inf')
     for epoch in range(epochs):
@@ -56,11 +56,6 @@ def training(model, model_name, train, val, test, optimizer, criteria,
             f'train|\t|epoch:{epoch}|\t|loss:{epoch_loss:.3f}|\t' +
             f'|acc:{epoch_acc:.3f}|')
 
-        if tensorboard:
-            summary.add_scalars(
-                summary_name, {'loss': epoch_loss, 'acc': epoch_acc},
-                epoch*len(train))
-
         val_loss, val_acc = 0, 0
         model.eval()
         with torch.no_grad():
@@ -83,7 +78,10 @@ def training(model, model_name, train, val, test, optimizer, criteria,
 
         if tensorboard:
             summary.add_scalars(
-                summary_name, {'val_loss': val_loss, 'val_acc': val_acc},
+                'loss', {'train': epoch_loss, 'val': val_loss},
+                (epoch*len(train)))
+            summary.add_scalars(
+                'accuracy', {'train': epoch_acc, 'val': val_acc},
                 (epoch*len(train)))
 
         if epoch == 0:
@@ -160,11 +158,11 @@ if __name__ == '__main__':
     loss_sgd = nn.CrossEntropyLoss()
     loss_sgd = loss_sgd.to(device=device)
 
-    training(model_sgd, model_name_sgd, train, val, test,
-             optimizer_sgd, loss_sgd, True, epochs, device)
-
     training(model_adam, model_name_adam, train, val, test,
              optimizer_adm, loss_adm, True, epochs, device)
+
+    training(model_sgd, model_name_sgd, train, val, test,
+             optimizer_sgd, loss_sgd, True, epochs, device)
     # clearing the cache of cuda
     if device.type != 'cpu':
         # empty cuda cache
