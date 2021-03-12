@@ -4,7 +4,13 @@ from general import set_logger
 from torchsummary import summary
 
 
-class AlexNet(nn.Module):
+class LeNet(nn.Module):
+    """LeNet Model implementation in pyTorch. Total params 61K.
+
+        Args:
+            input size: (-1, 1, 32, 32) in (B, C, H, W) format.
+    """
+
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 6, 5)
@@ -21,9 +27,10 @@ class AlexNet(nn.Module):
         x = F.relu(x)
         x = x.view(-1, 16*5*5)
         x = self.fc3(self.fc2(self.fc1(x)))
+        return x
 
 
 if __name__ == '__main__':
     logger = set_logger(__name__)
-    model = AlexNet()
+    model = LeNet()
     summary(model, (1, 32, 32))
