@@ -2,15 +2,15 @@ from model import LeNet
 from data_pipe_line import get_data_loaders
 from torch.optim import Adam, SGD
 from general import set_logger, select_device, calculate_accuracy
-from general import save_model
+from general import save_model, incremental_folder_name
 import torch
 import torch.nn as nn
 import gc
 from torch.utils.tensorboard import SummaryWriter
 
 
-def training(model, model_name, train, val, test, optimizer, criteria, summary,
-             epochs, device):
+def training(model, model_name, train, val, test, optimizer, criteria,
+             tensorboard, epochs, device):
     """Training loop.
 
         Args:
@@ -21,10 +21,16 @@ def training(model, model_name, train, val, test, optimizer, criteria, summary,
             test: test set (DataLoader object)
             optimizer: torch.optim object.
             criteria: a loss function. should have backward() function.
-            summary: summaryWriter object from torch.utils.tensorboard.
+            tensorboard: boolean value. True if you want to use tensorboard
             epochs: number of epochs to train.
             device: torch.device object
     """
+
+    if tensorboard:
+        summary_name = incremental_folder_name(
+            base_dir='logs', folder=model_name)
+        summary = SummaryWriter(summary_name)
+
     lowest_loss = float('inf')
     for epoch in range(epochs):
         epoch_loss, epoch_acc = 0, 0
@@ -49,9 +55,11 @@ def training(model, model_name, train, val, test, optimizer, criteria, summary,
         logger.info(
             f'train|\t|epoch:{epoch}|\t|loss:{epoch_loss:.3f}|\t' +
             f'|acc:{epoch_acc:.3f}|')
-        summary.add_scalars(
-            model_name, {'loss': epoch_loss, 'acc': epoch_acc},
-            epoch*len(train))
+
+        if tensorboard:
+            summary.add_scalars(
+                summary_name, {'loss': epoch_loss, 'acc': epoch_acc},
+                epoch*len(train))
 
         val_loss, val_acc = 0, 0
         model.eval()
@@ -73,11 +81,17 @@ def training(model, model_name, train, val, test, optimizer, criteria, summary,
             f'val|\t|epoch:{epoch}|\t|loss:{val_loss:.3f}|\t' +
             f'|acc:{val_acc:.3f}|')
 
-        summary.add_scalars(
-            model_name, {'val_loss': val_loss, 'val_acc': val_acc},
-            (epoch*len(train)))
+        if tensorboard:
+            summary.add_scalars(
+                summary_name, {'val_loss': val_loss, 'val_acc': val_acc},
+                (epoch*len(train)))
 
-        lowest_loss = save_model(model, val_loss, lowest_loss)
+        if epoch == 0:
+            weights_folder = incremental_folder_name(
+                base_dir='weights', folder=model_name)
+
+        lowest_loss = save_model(
+            model, val_loss, lowest_loss, D=weights_folder)
 
         if (epoch+1) % 5 == 0:
             test_loss, test_acc = 0, 0
@@ -117,12 +131,13 @@ if __name__ == '__main__':
     gc.collect()
     logger.info('python cache cleared.')
 
-    epochs = 20
+    epochs = 30
     lr = 0.001
     # get the dataset
-    train, val, test = get_data_loaders(batch_size=64)
+    train, val, test = get_data_loaders(batch_size=1024)
 
     # create model and move it to device
+    model_name_adam = 'LeNet_adam_lr0001'
     model_adam = LeNet()
     model_adam = model_adam.to(device=device)
 
@@ -133,26 +148,23 @@ if __name__ == '__main__':
     loss_adm = nn.CrossEntropyLoss()
     loss_adm = loss_adm.to(device=device)
 
-    # creating summary writers
-    model_name = 'LeNet_adam_lr0001'
-    summary_adm = SummaryWriter(f'logs/{model_name}')
-    # # create model and move it to device
-    # model_sgd = AlexNet()
-    # model_sgd = model_sgd.to(device=device)
+    # create model and move it to device
+    model_name_sgd = 'LeNet_sgd_lr0001_m09'
+    model_sgd = LeNet()
+    model_sgd = model_sgd.to(device=device)
 
-    # # create optimizer
-    # optimizer_sgd = SGD(model_sgd.parameters, lr=lr, momentum=0.9)
+    # create optimizer
+    optimizer_sgd = SGD(model_sgd.parameters(), lr=lr, momentum=0.9)
 
-    # # create loss
-    # loss_sgd = nn.CrossEntropyLoss()
-    # loss_sgd = loss_sgd.to(device=device)
+    # create loss
+    loss_sgd = nn.CrossEntropyLoss()
+    loss_sgd = loss_sgd.to(device=device)
 
-    # # creating summary writers
-    # summary_sgd = SummaryWriter('logs/LeNet_sgd_lr0001_m09')
+    training(model_sgd, model_name_sgd, train, val, test,
+             optimizer_sgd, loss_sgd, True, epochs, device)
 
-    training(model_adam, model_name, train, val, test,
-             optimizer_adm, loss_adm, summary_adm, epochs, device)
-
+    training(model_adam, model_name_adam, train, val, test,
+             optimizer_adm, loss_adm, True, epochs, device)
     # clearing the cache of cuda
     if device.type != 'cpu':
         # empty cuda cache

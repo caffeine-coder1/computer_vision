@@ -21,20 +21,21 @@ def setSeed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-def incrementalFolderName(base_dir='run', folder='train'):
-    """Creates a Folder and returns its path in base_dir/folder{increment} format.
+def incremental_folder_name(base_dir='run', folder='train'):
+    """Creates a Folder and returns its path in base_dir/folder_{increment} format.
 
         Args:
             base_dir: base directory. this should be relative
                       to current python execution path.
+
             folder: the folder name that needs to be incremented.
                     like folder1, folder2, folder3.
     """
     i = 1
-    while Path(f'{base_dir}/{folder}{i}').resolve().exists():
+    while Path(f'{base_dir}/{folder}_{i}').resolve().exists():
         i += 1
-    p = Path(f'{base_dir}/{folder}{i}').resolve()
-    p.mkdir()
+    p = Path(f'{base_dir}/{folder}_{i}').resolve()
+    p.mkdir(parents=True)
     return str(p)
 
 
@@ -44,6 +45,7 @@ def incremental_filename(baseDir='run', name='predictions', ext='png'):
         Args:
             base_dir: base directory. this should be relative
                       to current python execution path.
+
             name: the name of the file that needs to be incremented.
                   like file1, file2, file3.
     """
@@ -68,7 +70,9 @@ def setConsoleLogger(loggerName):
 def setFileLogger(loggerName):
     logFilePath = Path(f'logs/{loggerName}.log').resolve()
     if not logFilePath.exists():
-        logFilePath.mkdir()
+        if not logFilePath.parent.exists():
+            logFilePath.parent.mkdir(parents=True)
+        logFilePath.touch()
     # format for file logging
     formatter = logging.Formatter(
         fmt='%(asctime)s:%(name)s:%(levelname)s:%(message)s',
@@ -107,6 +111,7 @@ def calculate_accuracy(y_hat, y):
         Args:
             y_hat: output of the Model. Argmax will be taken
                    in first dimension
+
             y: ground Truth. a 1D array of actual values.
     """
     top_pred = y_hat.argmax(1, keepdim=True)
@@ -116,14 +121,18 @@ def calculate_accuracy(y_hat, y):
 
 
 def save_model(model, current_loss, lowest_loss, D='weights/'):
-    """Save the model to given directory in dir/run{increment} format
+    """Save the model to given directory. saves both last.pt and best.pt.
 
         Args:
             model: The model that needs to be saved.(nn.Module object)
+
             current_loss: loss at current state.(float object)
+
             lowest_loss: lowest loss seen till now. (float object)
+
             D: directory to save weights.
-               default is '{current python execution}/weights/' (str object)
+               default is '{current python execution}/weights/'
+               (str object)
     """
 
     assert isinstance(D, str), ("expecting string object for path, " +
@@ -132,8 +141,8 @@ def save_model(model, current_loss, lowest_loss, D='weights/'):
     D = Path(D)
     if not D.exists():
         D.mkdir()
-    last = (D/'last.pt').resolve()
-    best = (D/'best.pt').resolve()
+    last = str((D/'last.pt').resolve())
+    best = str((D/'best.pt').resolve())
 
     torch.save(model.state_dict(), last)
 
