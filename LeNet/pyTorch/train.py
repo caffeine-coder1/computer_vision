@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import gc
 from torch.utils.tensorboard import SummaryWriter
 import argparse
+import time
 
 
 def training(model, model_name, train, val, test, optimizer, criteria,
@@ -39,6 +40,7 @@ def training(model, model_name, train, val, test, optimizer, criteria,
     # ~~~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~~~ #
 
     for epoch in range(epochs):
+        start_time = time.time()
         epoch_loss, epoch_acc = 0, 0
         model.train()
         for x, y in train:
@@ -116,14 +118,12 @@ def training(model, model_name, train, val, test, optimizer, criteria,
                 test_acc = test_acc / len(test)
 
     # ~~~~~~~~~~~~~~~~~~~~~ ploting and logging ~~~~~~~~~~~~~~~~~~~~~ #
-
+        end_time = time.time()
+        epoch_time = round(end_time - start_time, 2)
         logger.info(
-            f'train|\t|epoch:{epoch+1}|\t|loss:{epoch_loss:.3f}|\t' +
-            f'|acc:{epoch_acc:.3f}|')
-
-        logger.info(
-            f'val|\t|epoch:{epoch+1}|\t|loss:{val_loss:.3f}|\t' +
-            f'|acc:{val_acc:.3f}|')
+            f'epoch:{epoch+1}|\t|train loss:{epoch_loss:.3f}| ' +
+            f'|train acc:{epoch_acc:.3f}|\t|val loss:{val_loss:.3f} ' +
+            f'|val acc:{val_acc:.3f}|\t|epoch time:{epoch_time} secs')
 
         if (epoch+1) % 5 == 0:
             logger.info(
