@@ -3,8 +3,10 @@ from data_pipe_line import get_data_loaders
 from torch.optim import Adam, SGD
 from general import set_logger, select_device, calculate_accuracy
 from general import save_model, incremental_folder_name
+from general import create_confusion_matrix
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import gc
 from torch.utils.tensorboard import SummaryWriter
 
@@ -32,6 +34,9 @@ def training(model, model_name, train, val, test, optimizer, criteria,
         summary = SummaryWriter(summary_path)
 
     lowest_loss = float('inf')
+
+    # ~~~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~~~ #
+
     for epoch in range(epochs):
         epoch_loss, epoch_acc = 0, 0
         model.train()
@@ -40,11 +45,14 @@ def training(model, model_name, train, val, test, optimizer, criteria,
             y = y.to(device)
             optimizer.zero_grad()
 
+            # forward
             y_hat = model(x)
             loss = criteria(y_hat, y)
             loss.backward()
 
+            # backward
             optimizer.step()
+
             with torch.no_grad():
                 epoch_loss += loss
                 acc = calculate_accuracy(y_hat, y)
@@ -52,11 +60,12 @@ def training(model, model_name, train, val, test, optimizer, criteria,
 
         epoch_loss = epoch_loss/len(train)
         epoch_acc = epoch_acc / len(train)
-        logger.info(
-            f'train|\t|epoch:{epoch}|\t|loss:{epoch_loss:.3f}|\t' +
-            f'|acc:{epoch_acc:.3f}|')
+
+    # ~~~~~~~~~~~~~~~~~~~~~ eval loop ~~~~~~~~~~~~~~~~~~~~~ #
 
         val_loss, val_acc = 0, 0
+        truth = []
+        preds = []
         model.eval()
         with torch.no_grad():
             for x, y in val:
@@ -64,32 +73,24 @@ def training(model, model_name, train, val, test, optimizer, criteria,
                 y = y.to(device)
 
                 y_hat = model(x)
+
+                y_prob = F.softmax(y_hat, dim=-1)
+                pred = y_prob.argmax(1, keepdim=True)
+                truth.append(y)
+                preds.append(pred)
+
                 loss = criteria(y_hat, y)
                 val_loss += loss
                 acc = calculate_accuracy(y_hat, y)
                 val_acc += acc
 
-        val_loss = val_loss/len(val)
-        val_acc = val_acc / len(val)
+            truth = torch.cat(truth, dim=0)
+            preds = torch.cat(preds, dim=0)
 
-        logger.info(
-            f'val|\t|epoch:{epoch}|\t|loss:{val_loss:.3f}|\t' +
-            f'|acc:{val_acc:.3f}|')
+            val_loss = val_loss/len(val)
+            val_acc = val_acc / len(val)
 
-        if tensorboard:
-            summary.add_scalars(
-                'loss', {'train': epoch_loss, 'val': val_loss},
-                (epoch*len(train)))
-            summary.add_scalars(
-                'accuracy', {'train': epoch_acc, 'val': val_acc},
-                (epoch*len(train)))
-
-        if epoch == 0:
-            weights_folder = incremental_folder_name(
-                base_dir='weights', folder=model_name)
-
-        lowest_loss = save_model(
-            model, val_loss, lowest_loss, D=weights_folder)
+    # ~~~~~~~~~~~~~~~~~~~~~ test loop ~~~~~~~~~~~~~~~~~~~~~ #
 
         if (epoch+1) % 5 == 0:
             test_loss, test_acc = 0, 0
@@ -106,10 +107,43 @@ def training(model, model_name, train, val, test, optimizer, criteria,
                     acc = calculate_accuracy(y_hat, y)
                     test_acc += acc
 
-            test_loss = test_loss/len(test)
-            test_acc = test_acc / len(test)
+                test_loss = test_loss/len(test)
+                test_acc = test_acc / len(test)
+
+    # ~~~~~~~~~~~~~~~~~~~~~ ploting and logging ~~~~~~~~~~~~~~~~~~~~~ #
+
+        logger.info(
+            f'train|\t|epoch:{epoch+1}|\t|loss:{epoch_loss:.3f}|\t' +
+            f'|acc:{epoch_acc:.3f}|')
+
+        logger.info(
+            f'val|\t|epoch:{epoch+1}|\t|loss:{val_loss:.3f}|\t' +
+            f'|acc:{val_acc:.3f}|')
+
+        if (epoch+1) % 5 == 0:
             logger.info(
                 f'test:|\t\t\t|loss:{test_loss:.3f}|\t|acc:{test_acc:.3f}|')
+
+        if tensorboard:
+            summary.add_scalars(
+                'loss', {'train': epoch_loss, 'val': val_loss},
+                (epoch*len(train)))
+            summary.add_scalars(
+                'accuracy', {'train': epoch_acc, 'val': val_acc},
+                (epoch*len(train)))
+            confusion_matrix = create_confusion_matrix(truth, preds)
+            summary.add_image(
+                f'confusion_matrix/{model_name}', confusion_matrix,
+                (epoch*len(train)))
+
+    # ~~~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~~~ #
+
+        if epoch == 0:
+            weights_folder = incremental_folder_name(
+                base_dir='weights', folder=model_name)
+
+        lowest_loss = save_model(
+            model, val_loss, lowest_loss, D=weights_folder)
 
 
 if __name__ == '__main__':
@@ -129,11 +163,13 @@ if __name__ == '__main__':
     gc.collect()
     logger.info('python cache cleared.')
 
-    epochs = 30
+    epochs = 10
     lr = 0.001
     # get the dataset
-    train, val, test = get_data_loaders(batch_size=1024)
+    train, val, test = get_data_loaders(batch_size=128, workers=4)
 
+    # list to store different models
+    models = []
     # create model and move it to device
     model_name_adam = 'LeNet_adam_lr0001'
     model_adam = LeNet()
@@ -146,6 +182,7 @@ if __name__ == '__main__':
     loss_adm = nn.CrossEntropyLoss()
     loss_adm = loss_adm.to(device=device)
 
+    models.append([model_name_adam, model_adam, optimizer_adm, loss_adm, True])
     # create model and move it to device
     model_name_sgd = 'LeNet_sgd_lr0001_m09'
     model_sgd = LeNet()
@@ -158,19 +195,23 @@ if __name__ == '__main__':
     loss_sgd = nn.CrossEntropyLoss()
     loss_sgd = loss_sgd.to(device=device)
 
-    training(model_adam, model_name_adam, train, val, test,
-             optimizer_adm, loss_adm, True, epochs, device)
+    models.append([model_name_sgd, model_sgd, optimizer_sgd, loss_sgd, True])
 
-    training(model_sgd, model_name_sgd, train, val, test,
-             optimizer_sgd, loss_sgd, True, epochs, device)
-    # clearing the cache of cuda
-    if device.type != 'cpu':
-        # empty cuda cache
-        logger.info('clearing torch cache...')
-        torch.cuda.empty_cache()
-        logger.info('torch cache cleared.')
+    for n, m, optim, loss, tb in models:
 
-    # clearing the python cache
-    logger.info('clearing python cache...')
-    gc.collect()
-    logger.info('python cache cleared.')
+        logger.info(f'starting training for model: {n}')
+
+        training(m, n, train, val, test,
+                 optim, loss, tb, epochs, device)
+
+        # clearing the cache of cuda
+        if device.type != 'cpu':
+            # empty cuda cache
+            logger.info('clearing torch cache...')
+            torch.cuda.empty_cache()
+            logger.info('torch cache cleared.')
+
+        # clearing the python cache
+        logger.info('clearing python cache...')
+        gc.collect()
+        logger.info('python cache cleared.')

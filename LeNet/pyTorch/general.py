@@ -4,6 +4,11 @@ import os
 import random
 import logging
 from pathlib import Path
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from PIL import Image
+import io
+from torchvision.transforms import transforms
 
 # ~~~~~~~~~~~~~~~~~~~~~ helper functions ~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -154,6 +159,26 @@ def save_model(model, current_loss, lowest_loss, D='weights/'):
         lowest_loss = current_loss
 
     return lowest_loss
+
+
+def create_confusion_matrix(y, y_hat):
+
+    fig = plt.figure(figsize=(7, 7))
+    ax = fig.add_subplot(1, 1, 1)
+    cm = confusion_matrix(y, y_hat)
+    # Normalize the confusion matrix.
+    cm = np.around(cm.astype('float') / cm.sum(axis=1)
+                   [:, np.newaxis], decimals=2)
+    cm = ConfusionMatrixDisplay(cm, display_labels=range(10))
+    cm.plot(cmap='Greys', ax=ax)
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    matrix = Image.open(buf)
+    tr = transforms.ToTensor()
+    matrix = tr(matrix)
+    return matrix
+
 
 # ~~~~~~~~~~~~~~~~~~~~~ system checks ~~~~~~~~~~~~~~~~~~~~~ #
 

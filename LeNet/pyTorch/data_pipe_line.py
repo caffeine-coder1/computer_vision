@@ -14,7 +14,7 @@ logger = set_logger(__name__)
 
 train_transforms = transforms.Compose([
     transforms.Resize(38),
-    transforms.RandomRotation(5),
+    transforms.RandomRotation(10),
     transforms.RandomCrop(32, padding=2),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.13], std=[0.3081])
@@ -52,16 +52,22 @@ class MNISTDataset(Dataset):
             (x_train, y_train), (x_test, y_test) = data
         if self.test:
             logger.info(f'loading test set with {x_test.shape[0]} examples')
-            return x_test, y_test
+            img_list = []
+            for img in x_test:
+                img_list.append(Image.fromarray(img))
+            return img_list, y_test
         else:
             logger.info(f'loading train set with {x_train.shape[0]} examples')
-            return x_train, y_train
+            img_list = []
+            for img in x_train:
+                img_list.append(Image.fromarray(img))
+            return img_list, y_train
 
     def __len__(self):
         return len(self.dataset[0])
 
     def __getitem__(self, idx):
-        x = Image.fromarray(self.dataset[0][idx])
+        x = self.dataset[0][idx]
         y = torch.tensor(self.dataset[1][idx], dtype=torch.long)
         if self.transforms:
             x = self.transforms(x)
@@ -75,7 +81,7 @@ def random_split_data_set(dataset, r=0.9):
     return train_d, val_d
 
 
-def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64):
+def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64, workers=1):
     """Returns 3 DataLoader instances namely train, val and test data loaders.
 
             Args:
@@ -89,9 +95,12 @@ def get_data_loaders(dir='data/mnist.pkl.gz', batch_size=64):
     val_data = copy.deepcopy(val_data)
     val_data.transforms = test_transforms
 
-    train_data_loader = DataLoader(train_data, batch_size, True)
-    val_data_loader = DataLoader(val_data, batch_size, False)
-    test_data_loader = DataLoader(test_data, batch_size, False)
+    train_data_loader = DataLoader(
+        train_data, batch_size, True, num_workers=workers)
+    val_data_loader = DataLoader(
+        val_data, batch_size, False, num_workers=workers)
+    test_data_loader = DataLoader(
+        test_data, batch_size, False, num_workers=workers)
 
     return train_data_loader, val_data_loader, test_data_loader
 
