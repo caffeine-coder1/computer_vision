@@ -161,9 +161,9 @@ def save_model(model, current_loss, lowest_loss, D='weights/'):
     return lowest_loss
 
 
-def create_confusion_matrix(y, y_hat):
+def create_confusion_matrix(y, y_hat, figsize=7):
 
-    fig = plt.figure(figsize=(7, 7))
+    fig = plt.figure(figsize=(figsize, figsize))
     ax = fig.add_subplot(1, 1, 1)
     cm = confusion_matrix(y, y_hat)
     # Normalize the confusion matrix.
@@ -174,6 +174,7 @@ def create_confusion_matrix(y, y_hat):
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
     buf.seek(0)
+    fig.close()
     matrix = Image.open(buf)
     tr = transforms.ToTensor()
     matrix = tr(matrix)
