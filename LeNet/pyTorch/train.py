@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import gc
 from torch.utils.tensorboard import SummaryWriter
+import argparse
 
 
 def training(model, model_name, train, val, test, optimizer, criteria,
@@ -152,6 +153,18 @@ def training(model, model_name, train, val, test, optimizer, criteria,
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--batch-size', type=int, default=2048,
+                        help='total batch size for all GPUs')
+
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--momentum', type=float, default=0.09)
+    parser.add_argument('--workers', type=int, default=2)
+
+    opt = parser.parse_args()
+
     logger = set_logger('training')
     device = select_device({})
 
@@ -167,15 +180,21 @@ if __name__ == '__main__':
     gc.collect()
     logger.info('python cache cleared.')
 
-    epochs = 10
-    lr = 0.001
+    epochs = opt.epochs
+    lr = opt.lr
+    momentum = opt.momentum
+    batch_size = opt.batch_size
+    workers = opt.workers
     # get the dataset
-    train, val, test = get_data_loaders(batch_size=128, workers=2)
+    train, val, test = get_data_loaders(batch_size=batch_size, workers=workers)
 
     # list to store different models
     models = []
     # create model and move it to device
-    model_name_adam = 'LeNet_adam_lr0001'
+    lr_str = str(lr).replace('.', '')
+    momentum_str = str(momentum).replace('.', '')
+
+    model_name_adam = f'LeNet_adam_lr{lr_str}_bth_{batch_size}'
     model_adam = LeNet()
     model_adam = model_adam.to(device=device)
 
@@ -188,12 +207,12 @@ if __name__ == '__main__':
 
     models.append([model_name_adam, model_adam, optimizer_adm, loss_adm, True])
     # create model and move it to device
-    model_name_sgd = 'LeNet_sgd_lr0001_m09'
+    model_name_sgd = f'LeNet_sgd_{lr_str}_bth_{batch_size}_m_{momentum_str}'
     model_sgd = LeNet()
     model_sgd = model_sgd.to(device=device)
 
     # create optimizer
-    optimizer_sgd = SGD(model_sgd.parameters(), lr=lr, momentum=0.9)
+    optimizer_sgd = SGD(model_sgd.parameters(), lr=lr, momentum=momentum)
 
     # create loss
     loss_sgd = nn.CrossEntropyLoss()
