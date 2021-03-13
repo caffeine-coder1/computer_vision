@@ -76,8 +76,12 @@ def training(model, model_name, train, val, test, optimizer, criteria,
 
                 y_prob = F.softmax(y_hat, dim=-1)
                 pred = y_prob.argmax(1, keepdim=True)
-                truth.append(y)
-                preds.append(pred)
+                if device.type != 'cpu':
+                    truth.append(y.cpu())
+                    preds.append(pred.cpu())
+                else:
+                    truth.append(y)
+                    preds.append(pred)
 
                 loss = criteria(y_hat, y)
                 val_loss += loss
@@ -166,7 +170,7 @@ if __name__ == '__main__':
     epochs = 10
     lr = 0.001
     # get the dataset
-    train, val, test = get_data_loaders(batch_size=128, workers=4)
+    train, val, test = get_data_loaders(batch_size=128, workers=2)
 
     # list to store different models
     models = []
