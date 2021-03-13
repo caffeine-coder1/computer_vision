@@ -174,7 +174,7 @@ def create_confusion_matrix(y, y_hat, figsize=7):
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
     buf.seek(0)
-    fig.close()
+    plt.close(fig)
     matrix = Image.open(buf)
     tr = transforms.ToTensor()
     matrix = tr(matrix)
