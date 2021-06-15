@@ -1,0 +1,27 @@
+architecture:
+ - !!python/tuple [64,7,2,3]
+ - "m"
+ # block 2
+ - !!python/tuple [192,3,1,1]
+ - "m"
+# block 3
+ - !!python/tuple [128,1,1,0]
+ - !!python/tuple [256,3,1,1]
+ - !!python/tuple [256,1,1,0]
+ - !!python/tuple [512,3,1,1]
+ - "m"
+ # block 4
+ - [!!python/tuple [256,1,1,0],!!python/tuple [512,3,1,1],4] # repeat 4 times
+ - !!python/tuple [512,1,1,0]
+ - !!python/tuple [1024,3,1,1]
+ - "m"
+ # block 5
+ - [!!python/tuple [512,1,1,0],!!python/tuple [1024,3,1,1],2] # repeat 2 times
+ - !!python/tuple [1024,3,1,1]
+ - !!python/tuple [1024,3,2,1]
+ # block 6
+ - !!python/tuple [1024,3,1,1]
+ - !!python/tuple [1024,3,1,1]
+ # dense layers
+ - !!python/tuple ["d",50176,4096]
+ - !!python/tuple ["d",4096,1470]

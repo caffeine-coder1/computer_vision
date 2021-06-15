@@ -1,69 +1,87 @@
-import torch.nn as nn
-from torch.nn import Conv2d, MaxPool2d, Linear
+import torch
+from torch.nn import Conv2d, MaxPool2d, Linear, BatchNorm2d, Module
+from torch.nn import LeakyReLU, BatchNorm1d, Sequential
 from torchsummary import summary
+import yaml
 
 
-class yolo_model_traditional(nn.Module):
-    def __init__(self):
+class BasicConvBlock(Module):
+
+    def __init__(self, ic, oc, *kwargs):
         super().__init__()
-        self.conv1 = Conv2d(3, 64, 7, 2, 3)
-        self.max_pool = MaxPool2d(2, 2)
-        self.conv2 = Conv2d(64, 192, 3, 1, 1)
-        self.conv3 = Conv2d(192, 128, 1, 1, 0)
-        self.conv4 = Conv2d(128, 256, 3, 1, 1)
-        self.conv5 = Conv2d(256, 256, 1, 1, 0)
-        self.conv6 = Conv2d(256, 512, 3, 1, 1)
-
-        self.conv7 = Conv2d(512, 256, 1, 1, 0)
-        self.conv8 = Conv2d(256, 512, 3, 1, 1)
-
-        self.conv9 = Conv2d(512, 512, 1, 1, 0)
-        self.conv10 = Conv2d(512, 1024, 3, 1, 1)
-
-        self.conv11 = Conv2d(1024, 512, 1, 1, 0)
-        self.conv12 = Conv2d(1024, 1024, 3, 1, 1)
-        self.conv13 = Conv2d(1024, 1024, 3, 2, 1)
-        self.dense1 = Linear(7168, 4096)
-        self.dense2 = Linear(4096, 1470)
+        self.conv = Conv2d(ic, oc, bias=False, *kwargs)
+        self.batch_norm = BatchNorm2d(oc)
+        self.activation = LeakyReLU()
 
     def forward(self, x):
-        # block 1
-        x = self.max_pool(self.conv1(x))
+        return self.activation(self.batch_norm(self.conv(x)))
 
-        # block 2
-        x = self.max_pool(self.conv2(x))
 
-        # block 3
-        x = self.conv4(self.conv3(x))
-        x = self.max_pool(self.conv6(self.conv5(x)))
+class BasicLinearBlock(Module):
 
-        # block 4
+    def __init__(self, ic, oc, *kwargs):
+        super().__init__()
+        self.Linear = Linear(ic, oc, *kwargs)
+        self.batch_norm = BatchNorm1d(oc)
+        self.activation = LeakyReLU()
 
-        for _ in range(4):
-            x = self.conv8(self.conv7(x))
+    def forward(self, x):
+        return self.activation(self.batch_norm(self.Linear(x)))
 
-        x = self.max_pool(self.conv10(self.conv9(x)))
 
-        # block 5
+class YOLOv1(Module):
+    def __init__(self, channels, model_arch):
+        super().__init__()
+        self.channels = channels
+        self.conv_layers = []
+        self.dense_layers = []
+        self.add_layers(model_arch)
 
-        for _ in range(2):
+    def add_layers(self, arch):
+        in_channel = self.channels
+        out_channel = 0
+        for L in arch:
+            if isinstance(L, tuple):
+                if not isinstance(L[0], str):
+                    out_channel = L[0]
+                    self.conv_layers += [BasicConvBlock(in_channel,
+                                                        out_channel,
+                                                        L[1], L[2], L[3])]
+                    in_channel = out_channel
+                else:
+                    if L[0].lower() == 'd':
+                        self.dense_layers += [Linear(L[1], L[2])]
+            if isinstance(L, str):
+                if L.lower() == "m":
+                    self.conv_layers += [MaxPool2d(2, 2)]
 
-            x = self.conv10(self.conv11(x))
+            if isinstance(L, list):
+                for _ in range(L[-1]):
+                    for r in range(len(L)-1):
+                        out_channel = L[r][0]
+                        self.conv_layers += [BasicConvBlock(in_channel,
+                                                            out_channel,
+                                                            L[r][1], L[r][2],
+                                                            L[r][3])]
+                        in_channel = out_channel
 
-        x = self.conv13(self.conv12(x))
+        self.conv_layers = Sequential(*self.conv_layers)
+        self.dense_layers = Sequential(*self.dense_layers)
 
-        # block 6
+    def forward(self, x):
 
-        x = self.conv12(self.conv12(x))
+        x = self.conv_layers(x)
+        x = torch.flatten(x, start_dim=1)
+        print(x.shape)
+        x = self.dense_layers(x)
 
-        # dense layers
-
-        x = x.view(-1, 7168)
-        x = self.dense2(self.dense1(x))
-        x = x.view(-1, 7, 7, 30)
+        return x
 
 
 if __name__ == "__main__":
-
-    model = yolo_model_traditional()
+    arch = []
+    with open('model.yaml') as f:
+        opt = yaml.full_load(f)
+        arch = opt['architecture']
+    model = YOLOv1(3, arch)
     summary(model, (3, 448, 448))
