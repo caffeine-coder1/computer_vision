@@ -35,7 +35,7 @@ writer_real = SummaryWriter("logs/real")
 # ~~~~~~~~~~~~~~~~~~~ loading the model ~~~~~~~~~~~~~~~~~~~ #
 
 disc = Discriminator(in_features=CHANNELS, z_dim=Z_DIM).to(work_device)
-gen = Faker(z_dim=Z_DIM)
+gen = Faker(z_dim=Z_DIM).to(work_device)
 
 # ~~~~~~~~~~~~~~~~~~~ create optimizer and loss ~~~~~~~~~~~~~~~~~~~ #
 
