@@ -170,14 +170,14 @@ if __name__ == "__main__":
                         default='', help='save and load location of weights')
     parser.add_argument('--logs', type=str,
                         default='', help='save log files to')
-    parser.add_argument("epochs", type=int, default=20,
+    parser.add_argument("--epochs", type=int, default=20,
                         help='number of epochs to train')
     parser.add_argument('--batch-size', type=int, default=128,
                         help='total batch size for all GPUs')
-    parser.add_argument('lr', type=float, default=2e-4,
+    parser.add_argument('--lr', type=float, default=2e-4,
                         help='learning rate to use')
 
-    parser.add_argument('resume', type=bool, default=True,
+    parser.add_argument('--resume', type=bool, default=True,
                         help='should use the last saved weights')
     opt = parser.parse_args()
     training(opt)
