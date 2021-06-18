@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 from model import Discriminator, Faker
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
-
+import math
+from tqdm import tqdm
 
 if __name__ == "__main__":
 
@@ -54,10 +55,10 @@ if __name__ == "__main__":
     # ~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~ #
 
     for epoch in range(EPOCHS):
-        D_loss_prev = inf
-        G_loss_prev = inf
+        D_loss_prev = math.inf
+        G_loss_prev = math.inf
 
-        for batch_idx, (real, _) in enumerate(loader):
+        for batch_idx, (real, _) in enumerate(tqdm(loader)):
             disc.train()
             gen.train()
             real = real.to(work_device)
