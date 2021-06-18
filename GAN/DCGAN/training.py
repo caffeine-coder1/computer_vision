@@ -1,3 +1,4 @@
+import argparse
 import torch
 import torchvision
 import torch.optim as optim
@@ -10,26 +11,27 @@ from pathlib import Path
 import math
 from tqdm import tqdm
 
-if __name__ == "__main__":
+
+def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ hyper parameters ~~~~~~~~~~~~~~~~~~~ #
-    EPOCHS = 20
+    EPOCHS = opt.epochs
     CHANNELS = 1
     H, W = 64, 64
-    IMG_SIZE = CHANNELS * H * W
-    lr = 2e-4
+    lr = opt.lr
     work_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     FEATURE_D = 128
     Z_DIM = 100
-    GEN_TRAIN_STEPS = 5
-    BATCH_SIZE = 128
-    Weight_dir = Path('/weights').resolve()
+    GEN_TRAIN_STEPS = 2
+    BATCH_SIZE = opt.batch_size
+    Weight_dir = Path(f'{opt.weights}').resolve()
     if not Weight_dir.exists():
         Weight_dir.mkdir()
     # ~~~~~~~~~~~~~~~~~~~ loading the dataset ~~~~~~~~~~~~~~~~~~~ #
 
     trans = transforms.Compose(
-        [transforms.Resize((H, W)), transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+        [transforms.Resize((H, W)),
+         transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     MNIST_data = MNIST('./data', True, transform=trans, download=True)
 
@@ -45,6 +47,19 @@ if __name__ == "__main__":
     disc = Discriminator(img_channels=CHANNELS,
                          feature_d=FEATURE_D).to(work_device)
     gen = Faker(Z_DIM, CHANNELS, FEATURE_D).to(work_device)
+
+    if opt.resume:
+        if Path(Weight_dir/'dirscriminator.pth').exists():
+
+            disc = disc.load_state_dict(torch.load(
+                str(Weight_dir/'dirscriminator.pth'),
+                map_location=work_device))
+
+        if Path(Weight_dir/'generator.pth').exists():
+
+            gen = gen.load_state_dict(torch.load(
+                str(Weight_dir/'generator.pth'),
+                map_location=work_device))
 
     # ~~~~~~~~~~~~~~~~~~~ create optimizer and loss ~~~~~~~~~~~~~~~~~~~ #
 
@@ -136,3 +151,22 @@ if __name__ == "__main__":
             G_loss_prev = G_loss
             weight_path = str(Weight_dir/'generator.pth')
             torch.save(gen.state_dict(), weight_path)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    # initial pre training weights
+    parser.add_argument('--weights', type=str,
+                        default='', help='save and load location of weights')
+    parser.add_argument("epochs", type=int, default=20,
+                        help='number of epochs to train')
+    parser.add_argument('--batch-size', type=int, default=128,
+                        help='total batch size for all GPUs')
+    parser.add_argument('lr', type=float, default=2e-4,
+                        help='learning rate to use')
+
+    parser.add_argument('resume', type=bool, default=True,
+                        help='should use the last saved weights')
+    opt = parser.parse_args()
+    training(opt)
