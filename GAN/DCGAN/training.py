@@ -10,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 import math
 from tqdm import tqdm
+import shutil
 
 
 def training(opt):
@@ -24,9 +25,16 @@ def training(opt):
     Z_DIM = 100
     GEN_TRAIN_STEPS = 2
     BATCH_SIZE = opt.batch_size
-    Weight_dir = Path(f'{opt.weights}').resolve()
-    if not Weight_dir.exists():
-        Weight_dir.mkdir()
+
+    if opt.logs:
+        log_dir = Path(f'{opt.logs}').resolve()
+        if log_dir.exists():
+            shutil.rmtree(str(log_dir))
+
+    if opt.weights:
+        Weight_dir = Path(f'{opt.weights}').resolve()
+        if not Weight_dir.exists():
+            Weight_dir.mkdir()
     # ~~~~~~~~~~~~~~~~~~~ loading the dataset ~~~~~~~~~~~~~~~~~~~ #
 
     trans = transforms.Compose(
@@ -39,8 +47,8 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ creating tensorboard variables ~~~~~~~~~~~~~~~~~~~ #
 
-    writer_fake = SummaryWriter("logs/fake")
-    writer_real = SummaryWriter("logs/real")
+    writer_fake = SummaryWriter(f"{str(log_dir)}/fake")
+    writer_real = SummaryWriter(f"{str(log_dir)}/real")
 
     # ~~~~~~~~~~~~~~~~~~~ loading the model ~~~~~~~~~~~~~~~~~~~ #
 
@@ -142,15 +150,16 @@ def training(opt):
                     )
 
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
-        if D_loss_prev > D_loss:
-            D_loss_prev = D_loss
-            weight_path = str(Weight_dir/'dirscriminator.pth')
-            torch.save(disc.state_dict(), weight_path)
+        if opt.weights:
+            if D_loss_prev > D_loss:
+                D_loss_prev = D_loss
+                weight_path = str(Weight_dir/'dirscriminator.pth')
+                torch.save(disc.state_dict(), weight_path)
 
-        if G_loss_prev > G_loss:
-            G_loss_prev = G_loss
-            weight_path = str(Weight_dir/'generator.pth')
-            torch.save(gen.state_dict(), weight_path)
+            if G_loss_prev > G_loss:
+                G_loss_prev = G_loss
+                weight_path = str(Weight_dir/'generator.pth')
+                torch.save(gen.state_dict(), weight_path)
 
 
 if __name__ == "__main__":
@@ -159,6 +168,8 @@ if __name__ == "__main__":
     # initial pre training weights
     parser.add_argument('--weights', type=str,
                         default='', help='save and load location of weights')
+    parser.add_argument('--logs', type=str,
+                        default='', help='save log files to')
     parser.add_argument("epochs", type=int, default=20,
                         help='number of epochs to train')
     parser.add_argument('--batch-size', type=int, default=128,
