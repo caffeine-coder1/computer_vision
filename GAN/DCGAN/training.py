@@ -23,7 +23,7 @@ def training(opt):
     work_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     FEATURE_D = 128
     Z_DIM = 100
-    GEN_TRAIN_STEPS = 2
+    GEN_TRAIN_STEPS = 5
     BATCH_SIZE = opt.batch_size
 
     if opt.logs:
