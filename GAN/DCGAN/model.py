@@ -69,9 +69,9 @@ class Faker(nn.Module):
 
 
 if __name__ == "__main__":
-    disc = Discriminator(3, 128)
-    gen = Faker(100, 3, 128)
+    disc = Discriminator(1, 128)
+    gen = Faker(100, 1, 128)
 
-    summary(disc, (3, 64, 64))
+    summary(disc, (1, 64, 64))
 
     summary(gen, (100, 1, 1))
