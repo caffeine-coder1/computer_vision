@@ -60,13 +60,13 @@ def training(opt):
     if opt.resume:
         if Path(Weight_dir/'dirscriminator.pth').exists():
 
-            disc = disc.load_state_dict(torch.load(
+            disc.load_state_dict(torch.load(
                 str(Weight_dir/'dirscriminator.pth'),
                 map_location=work_device))
 
         if Path(Weight_dir/'generator.pth').exists():
 
-            gen = gen.load_state_dict(torch.load(
+            gen.load_state_dict(torch.load(
                 str(Weight_dir/'generator.pth'),
                 map_location=work_device))
 
