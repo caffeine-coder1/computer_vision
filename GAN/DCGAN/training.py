@@ -49,6 +49,7 @@ def training(opt):
 
     writer_fake = SummaryWriter(f"{str(log_dir)}/fake")
     writer_real = SummaryWriter(f"{str(log_dir)}/real")
+    loss_writer = SummaryWriter(f"{str(log_dir)}/loss")
 
     # ~~~~~~~~~~~~~~~~~~~ loading the model ~~~~~~~~~~~~~~~~~~~ #
 
@@ -76,10 +77,12 @@ def training(opt):
     criterion = torch.nn.BCELoss()
 
     # ~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~ #
+    D_loss_prev = math.inf
+    G_loss_prev = math.inf
+    D_loss = 0
+    G_loss = 0
 
     for epoch in range(EPOCHS):
-        D_loss_prev = math.inf
-        G_loss_prev = math.inf
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
             disc.train()
@@ -148,6 +151,10 @@ def training(opt):
                     writer_real.add_image(
                         "Mnist Real Images", img_grid_real, global_step=epoch
                     )
+                    loss_writer.add_scalar(
+                        'discriminator', D_loss, global_step=epoch)
+                    loss_writer.add_scalar(
+                        'generator', G_loss, global_step=epoch)
 
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
         if opt.weights:
