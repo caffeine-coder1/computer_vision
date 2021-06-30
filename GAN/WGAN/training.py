@@ -27,7 +27,7 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ as per WGAN paper ~~~~~~~~~~~~~~~~~~~ #
 
-    lr = opt.lr if opt.lr else 5e-5
+    lr = opt.lr
     CRITIC_TRAIN_STEPS = 5
     WEIGHT_CLIP = 0.01
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
                         help='number of epochs to train')
     parser.add_argument('--batch-size', type=int, default=128,
                         help='total batch size for all GPUs')
-    parser.add_argument('--lr', type=float, default=2e-4,
+    parser.add_argument('--lr', type=float, default=5e-5,
                         help='learning rate to use')
 
     parser.add_argument('--resume', type=bool, default=True,
