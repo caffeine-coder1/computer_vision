@@ -46,7 +46,7 @@ def training(opt):
     # ~~~~~~~~~~~~~~~~~~~ loading the dataset ~~~~~~~~~~~~~~~~~~~ #
 
     trans = transforms.Compose(
-        [transforms.Resize((H, W)),
+        [transforms.ToPILImage(), transforms.Resize((H, W)),
          transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     MNIST_data = MNIST('/datasets', True, transform=trans, download=True)
