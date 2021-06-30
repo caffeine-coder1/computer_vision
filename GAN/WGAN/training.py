@@ -92,6 +92,8 @@ def training(opt):
     G_loss = 0
 
     for epoch in range(EPOCHS):
+        C_loss_avg = 0
+        G_loss_avg = 0
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
             critic.train()
@@ -115,7 +117,7 @@ def training(opt):
                 # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
                 C_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
-
+                C_loss_avg += C_loss
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
                 critic.zero_grad()
@@ -139,7 +141,7 @@ def training(opt):
             # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
             G_loss = -(torch.mean(fake_predict))
-
+            G_loss_avg += G_loss
             # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
             gen.zero_grad()
@@ -148,10 +150,13 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ loading the tensorboard ~~~~~~~~~~~~~~~~~~~ #
 
-            if batch_idx == 0:
+            if batch_idx == 0 and epoch > 1:
+                C_loss_avg = C_loss_avg/(CRITIC_TRAIN_STEPS*BATCH_SIZE)
+                G_loss_avg = G_loss_avg/(BATCH_SIZE)
+
                 print(
-                    f"Epoch [{epoch}/{EPOCHS}] Batch {batch_idx}/{len(loader)} \
-                                Loss D: {C_loss:.4f}, loss G: {G_loss:.4f}"
+                    f"Epoch [{epoch}/{EPOCHS}] Batch {batch_idx}/{len(loader)}"
+                    + f"Loss D: {C_loss_avg:.4f}, loss G: {G_loss_avg:.4f}"
                 )
 
                 with torch.no_grad():
@@ -181,13 +186,13 @@ def training(opt):
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
 
         if opt.weights:
-            if C_loss_prev > C_loss:
-                C_loss_prev = C_loss
+            if C_loss_prev > C_loss_avg:
+                C_loss_prev = C_loss_avg
                 weight_path = str(Weight_dir/'critic.pth')
                 torch.save(critic.state_dict(), weight_path)
 
-            if G_loss_prev > G_loss:
-                G_loss_prev = G_loss
+            if G_loss_prev > G_loss_avg:
+                G_loss_prev = G_loss_avg
                 weight_path = str(Weight_dir/'generator.pth')
                 torch.save(gen.state_dict(), weight_path)
 
