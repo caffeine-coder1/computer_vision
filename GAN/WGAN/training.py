@@ -11,6 +11,7 @@ from pathlib import Path
 import math
 from tqdm import tqdm
 import shutil
+from general import print_gpu_details, print_memory_utilization
 
 
 def training(opt):
@@ -91,9 +92,12 @@ def training(opt):
     C_loss = 0
     G_loss = 0
 
+    print_gpu_details()
     for epoch in range(EPOCHS):
         C_loss_avg = 0
         G_loss_avg = 0
+
+        print_memory_utilization()
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
             critic.train()
@@ -150,7 +154,7 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ loading the tensorboard ~~~~~~~~~~~~~~~~~~~ #
 
-            if batch_idx == 0 and epoch > 1:
+            if batch_idx == 0 and epoch >= 1:
                 C_loss_avg = C_loss_avg/(CRITIC_TRAIN_STEPS*BATCH_SIZE)
                 G_loss_avg = G_loss_avg/(BATCH_SIZE)
 
