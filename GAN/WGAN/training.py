@@ -16,15 +16,22 @@ import shutil
 def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ hyper parameters ~~~~~~~~~~~~~~~~~~~ #
+
     EPOCHS = opt.epochs
-    CHANNELS = 1
+    CHANNELS = 2
     H, W = 64, 64
-    lr = opt.lr
     work_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     FEATURE_D = 128
     Z_DIM = 100
-    GEN_TRAIN_STEPS = 5
     BATCH_SIZE = opt.batch_size
+
+    # ~~~~~~~~~~~~~~~~~~~ as per WGAN paper ~~~~~~~~~~~~~~~~~~~ #
+
+    lr = opt.lr if opt.lr else 5e-5
+    CRITIC_TRAIN_STEPS = 5
+    WEIGHT_CLIP = 0.01
+
+    # ~~~~~~~~~~~ creating directories for weights ~~~~~~~~~~~ #
 
     if opt.logs:
         log_dir = Path(f'{opt.logs}').resolve()
@@ -35,6 +42,7 @@ def training(opt):
         Weight_dir = Path(f'{opt.weights}').resolve()
         if not Weight_dir.exists():
             Weight_dir.mkdir()
+
     # ~~~~~~~~~~~~~~~~~~~ loading the dataset ~~~~~~~~~~~~~~~~~~~ #
 
     trans = transforms.Compose(
@@ -53,15 +61,15 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ loading the model ~~~~~~~~~~~~~~~~~~~ #
 
-    disc = Discriminator(img_channels=CHANNELS,
-                         feature_d=FEATURE_D).to(work_device)
+    critic = Discriminator(img_channels=CHANNELS,
+                           feature_d=FEATURE_D).to(work_device)
     gen = Faker(Z_DIM, CHANNELS, FEATURE_D).to(work_device)
 
     if opt.resume:
-        if Path(Weight_dir/'dirscriminator.pth').exists():
+        if Path(Weight_dir/'critic.pth').exists():
 
-            disc.load_state_dict(torch.load(
-                str(Weight_dir/'dirscriminator.pth'),
+            critic.load_state_dict(torch.load(
+                str(Weight_dir/'critic.pth'),
                 map_location=work_device))
 
         if Path(Weight_dir/'generator.pth').exists():
@@ -70,13 +78,13 @@ def training(opt):
                 str(Weight_dir/'generator.pth'),
                 map_location=work_device))
 
-    # ~~~~~~~~~~~~~~~~~~~ create optimizer and loss ~~~~~~~~~~~~~~~~~~~ #
+    # ~~~~~~~~~~~~~~~~~~~ create optimizers ~~~~~~~~~~~~~~~~~~~ #
 
-    disc_optim = optim.Adam(disc.parameters(), lr, (0.5, 0.999))
-    gen_optim = optim.Adam(gen.parameters(), lr, (0.5, 0.999))
-    criterion = torch.nn.BCELoss()
+    critic_optim = optim.RMSprop(critic.parameters(), lr)
+    gen_optim = optim.RMSprop(gen.parameters(), lr)
 
     # ~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~ #
+
     D_loss_prev = math.inf
     G_loss_prev = math.inf
     D_loss = 0
@@ -85,44 +93,57 @@ def training(opt):
     for epoch in range(EPOCHS):
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
-            disc.train()
+            critic.train()
             gen.train()
             real = real.to(work_device)
             fixed_noise = torch.rand(
                 real.shape[0], Z_DIM, 1, 1).to(work_device)
+
             # ~~~~~~~~~~~~~~~~~~~ discriminator loop ~~~~~~~~~~~~~~~~~~~ #
 
-            fake = gen(fixed_noise)  # dim of (N,1,28,28)
-            # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
-            real_predict = disc(real).view(-1)  # make it one dimensional array
-            fake_predict = disc(fake).view(-1)  # make it one dimensional array
+            for _ in range(CRITIC_TRAIN_STEPS):
+                fake = gen(fixed_noise)  # dim of (N,1,W,H)
 
-            labels = torch.cat([torch.ones_like(real_predict),
-                                torch.zeros_like(fake_predict)], dim=0)
-
-            # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
-            D_loss = criterion(
-                torch.cat([real_predict, fake_predict], dim=0), labels)
-
-            # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
-            disc.zero_grad()
-            D_loss.backward()
-            disc_optim.step()
-
-            # ~~~~~~~~~~~~~~~~~~~ generator loop ~~~~~~~~~~~~~~~~~~~ #
-            for _ in range(GEN_TRAIN_STEPS):
                 # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
-                fake = gen(fixed_noise)
-                # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
+
                 # make it one dimensional array
-                fake_predict = disc(fake).view(-1)
+                real_predict = critic(real).view(-1)
+                # make it one dimensional array
+                fake_predict = critic(fake).view(-1)
+
                 # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
-                G_loss = criterion(fake_predict, torch.ones_like(fake_predict))
+                D_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
+
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
-                gen.zero_grad()
-                G_loss.backward()
-                gen_optim.step()
+
+                critic.zero_grad()
+                D_loss.backward()
+                critic_optim.step()
+
+                # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
+
+                for p in critic.parameters():
+                    p.data.clamp_(-WEIGHT_CLIP, WEIGHT_CLIP)
+
+            # ~~~~~~~~~~~~~~~~~~~ generator loop ~~~~~~~~~~~~~~~~~~~ #
+
+            fake = gen(fixed_noise)
+
+            # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
+
+            # make it one dimensional array
+            fake_predict = critic(fake).view(-1)
+
+            # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
+
+            G_loss = -(torch.mean(fake_predict))
+
+            # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
+
+            gen.zero_grad()
+            G_loss.backward()
+            gen_optim.step()
 
             # ~~~~~~~~~~~~~~~~~~~ loading the tensorboard ~~~~~~~~~~~~~~~~~~~ #
 
@@ -133,7 +154,7 @@ def training(opt):
                 )
 
                 with torch.no_grad():
-                    disc.eval()
+                    critic.eval()
                     gen.eval()
                     fake = gen(fixed_noise).reshape(-1, CHANNELS, H, W)
                     data = real.reshape(-1, CHANNELS, H, W)
@@ -157,11 +178,12 @@ def training(opt):
                         'generator', G_loss, global_step=epoch)
 
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
+
         if opt.weights:
             if D_loss_prev > D_loss:
                 D_loss_prev = D_loss
-                weight_path = str(Weight_dir/'dirscriminator.pth')
-                torch.save(disc.state_dict(), weight_path)
+                weight_path = str(Weight_dir/'critic.pth')
+                torch.save(critic.state_dict(), weight_path)
 
             if G_loss_prev > G_loss:
                 G_loss_prev = G_loss
