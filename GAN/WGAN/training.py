@@ -50,7 +50,7 @@ def training(opt):
         [transforms.Resize((H, W)),
          transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
-    MNIST_data = MNIST('/datasets', True, transform=trans, download=True)
+    MNIST_data = MNIST(str(opt.data_dir), True, transform=trans, download=True)
 
     loader = DataLoader(MNIST_data, BATCH_SIZE, True,
                         num_workers=1, pin_memory=True,)
@@ -218,5 +218,6 @@ if __name__ == "__main__":
 
     parser.add_argument('--resume', type=bool, default=True,
                         help='should use the last saved weights')
+    parser.add_argument('--data-dir', type=str, default='/datasets')
     opt = parser.parse_args()
     training(opt)
