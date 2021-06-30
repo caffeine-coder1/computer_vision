@@ -120,7 +120,8 @@ def print_memory_utilization(GPU_INDEX=0):
     r = torch.cuda.memory_reserved(GPU_INDEX)
     a = torch.cuda.memory_allocated(GPU_INDEX)
     f = r-a  # free inside reserved
-    print(f"total Memory: {t:.4f} available: {f:.4f}")
+    print(f"Total: {t/1e9:.2f}GB| Reservered: {r/1e9:.2f}GB|"
+          + f"Allocated: {a/1e9:.2f}GB| available: {f/1e9:.2f}GB")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~ network helper functions ~~~~~~~~~~~~~~~~~~~~~ #
