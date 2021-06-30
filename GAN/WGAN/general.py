@@ -111,6 +111,18 @@ def set_logger(logger_name):
 logger = set_logger(__name__)
 
 
+def print_gpu_details():
+    print(torch.cuda.get_device_name(torch.cuda.current_device()))
+
+
+def print_memory_utilization(GPU_INDEX=0):
+    t = torch.cuda.get_device_properties(GPU_INDEX).total_memory
+    r = torch.cuda.memory_reserved(GPU_INDEX)
+    a = torch.cuda.memory_allocated(GPU_INDEX)
+    f = r-a  # free inside reserved
+    print(f"total Memory: {t:.4f} available: {f:.4f}")
+
+
 # ~~~~~~~~~~~~~~~~~~~~~ network helper functions ~~~~~~~~~~~~~~~~~~~~~ #
 
 def calculate_accuracy(y_hat, y):
@@ -187,7 +199,7 @@ def create_confusion_matrix(y, y_hat, figsize=7):
 def select_device(opt):
     """Returns a torch.device object based on the input.
 
-        Args: 
+        Args:
              opt: a dictionary. should have a key called device.
                   for example: opt['device'] = 0 for 'cuda:0'
                   and 1 for 'cuda:1'.
