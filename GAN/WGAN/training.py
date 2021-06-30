@@ -18,7 +18,7 @@ def training(opt):
     # ~~~~~~~~~~~~~~~~~~~ hyper parameters ~~~~~~~~~~~~~~~~~~~ #
 
     EPOCHS = opt.epochs
-    CHANNELS = 2
+    CHANNELS = 1
     H, W = 64, 64
     work_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     FEATURE_D = 128
@@ -49,7 +49,7 @@ def training(opt):
         [transforms.Resize((H, W)),
          transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
-    MNIST_data = MNIST('./data', True, transform=trans, download=True)
+    MNIST_data = MNIST('/datasets', True, transform=trans, download=True)
 
     loader = DataLoader(MNIST_data, BATCH_SIZE, True, num_workers=1)
 
