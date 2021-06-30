@@ -25,13 +25,14 @@ def training(opt):
     FEATURE_D = 128
     Z_DIM = 100
     BATCH_SIZE = opt.batch_size
-
     # ~~~~~~~~~~~~~~~~~~~ as per WGAN paper ~~~~~~~~~~~~~~~~~~~ #
 
     lr = opt.lr
     CRITIC_TRAIN_STEPS = 5
     WEIGHT_CLIP = 0.01
 
+    print(f"Epochs: {EPOCHS}| lr: {lr}| batch size {BATCH_SIZE}" +
+          f"device: {work_device}")
     # ~~~~~~~~~~~ creating directories for weights ~~~~~~~~~~~ #
 
     if opt.logs:
