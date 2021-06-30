@@ -85,9 +85,9 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~ #
 
-    D_loss_prev = math.inf
+    C_loss_prev = math.inf
     G_loss_prev = math.inf
-    D_loss = 0
+    C_loss = 0
     G_loss = 0
 
     for epoch in range(EPOCHS):
@@ -113,12 +113,12 @@ def training(opt):
 
                 # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
-                D_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
+                C_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
 
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
                 critic.zero_grad()
-                D_loss.backward()
+                C_loss.backward()
                 critic_optim.step()
 
                 # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
@@ -150,7 +150,7 @@ def training(opt):
             if batch_idx == 0:
                 print(
                     f"Epoch [{epoch}/{EPOCHS}] Batch {batch_idx}/{len(loader)} \
-                                Loss D: {D_loss:.4f}, loss G: {G_loss:.4f}"
+                                Loss D: {C_loss:.4f}, loss G: {G_loss:.4f}"
                 )
 
                 with torch.no_grad():
@@ -173,15 +173,15 @@ def training(opt):
                         "Mnist Real Images", img_grid_real, global_step=epoch
                     )
                     loss_writer.add_scalar(
-                        'discriminator', D_loss, global_step=epoch)
+                        'Critic', C_loss, global_step=epoch)
                     loss_writer.add_scalar(
                         'generator', G_loss, global_step=epoch)
 
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
 
         if opt.weights:
-            if D_loss_prev > D_loss:
-                D_loss_prev = D_loss
+            if C_loss_prev > C_loss:
+                C_loss_prev = C_loss
                 weight_path = str(Weight_dir/'critic.pth')
                 torch.save(critic.state_dict(), weight_path)
 
