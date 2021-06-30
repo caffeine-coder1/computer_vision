@@ -50,10 +50,9 @@ def training(opt):
          transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
     MNIST_data = MNIST('/datasets', True, transform=trans, download=True)
-    MNIST_data = MNIST_data.to(work_device)
 
     loader = DataLoader(MNIST_data, BATCH_SIZE, True,
-                        num_workers=1, pin_memory=True)
+                        num_workers=1, pin_memory=True,)
 
     # ~~~~~~~~~~~~~~~~~~~ creating tensorboard variables ~~~~~~~~~~~~~~~~~~~ #
 
@@ -97,7 +96,7 @@ def training(opt):
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
             critic.train()
             gen.train()
-            # real = real.to(work_device)
+            real = real.to(work_device)
             fixed_noise = torch.rand(
                 real.shape[0], Z_DIM, 1, 1).to(work_device)
 
