@@ -125,7 +125,7 @@ def training(opt):
                 # make it one dimensional array
                 real_predict = critic(real).view(-1)
                 # make it one dimensional array
-                fake_predict = critic(fake).view(-1)
+                fake_predict = critic(fake.detach()).view(-1)
 
                 # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
@@ -135,7 +135,7 @@ def training(opt):
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
                 critic.zero_grad()
-                C_loss.backward(retain_graph=True)
+                C_loss.backward()
                 critic_optim.step()
 
                 # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
@@ -170,7 +170,7 @@ def training(opt):
                 G_loss_avg = G_loss_avg/(BATCH_SIZE)
 
                 print(
-                    f"Epoch [{epoch}/{EPOCHS}] Batch {batch_idx}/{len(loader)}"
+                    f"Epoch [{epoch}/{EPOCHS}] "
                     + f"Loss D: {C_loss_avg:.4f}, loss G: {G_loss_avg:.4f}"
                 )
 
@@ -179,11 +179,13 @@ def training(opt):
                 with torch.no_grad():
                     critic.eval()
                     gen.eval()
-                    fake = gen(fixed_noise).reshape(-1, CHANNELS, H, W)
-                    data = real.reshape(-1, CHANNELS, H, W)
                     if BATCH_SIZE > 32:
-                        fake = fake[:32]
-                        data = data[:32]
+                        fake = gen(fixed_noise[32]).reshape(-1, CHANNELS, H, W)
+                        data = real[32].reshape(-1, CHANNELS, H, W)
+                    else:
+                        fake = gen(fixed_noise).reshape(-1, CHANNELS, H, W)
+                        data = real.reshape(-1, CHANNELS, H, W)
+
                     img_grid_fake = torchvision.utils.make_grid(
                         fake, normalize=True)
                     img_grid_real = torchvision.utils.make_grid(
