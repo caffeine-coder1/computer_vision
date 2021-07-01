@@ -5,7 +5,7 @@ import torch.optim as optim
 from torchvision.transforms import transforms
 from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader
-from model import Discriminator, Faker
+from model import Critic, Faker
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 import math
@@ -66,8 +66,8 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ loading the model ~~~~~~~~~~~~~~~~~~~ #
 
-    critic = Discriminator(img_channels=CHANNELS,
-                           feature_d=FEATURE_D).to(work_device)
+    critic = Critic(img_channels=CHANNELS,
+                    feature_d=FEATURE_D).to(work_device)
     gen = Faker(Z_DIM, CHANNELS, FEATURE_D).to(work_device)
 
     if opt.resume:
