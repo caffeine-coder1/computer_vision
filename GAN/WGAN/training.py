@@ -25,14 +25,16 @@ def training(opt):
     FEATURE_D = 128
     Z_DIM = 100
     BATCH_SIZE = opt.batch_size
+
     # ~~~~~~~~~~~~~~~~~~~ as per WGAN paper ~~~~~~~~~~~~~~~~~~~ #
 
     lr = opt.lr
     CRITIC_TRAIN_STEPS = 5
     WEIGHT_CLIP = 0.01
 
-    print(f"Epochs: {EPOCHS}| lr: {lr}| batch size {BATCH_SIZE}" +
-          f"device: {work_device}")
+    print(f"Epochs: {EPOCHS}| lr: {lr}| batch size {BATCH_SIZE}|" +
+          f" device: {work_device}")
+
     # ~~~~~~~~~~~ creating directories for weights ~~~~~~~~~~~ #
 
     if opt.logs:
@@ -88,26 +90,31 @@ def training(opt):
 
     # ~~~~~~~~~~~~~~~~~~~ training loop ~~~~~~~~~~~~~~~~~~~ #
 
+    # loss variables
     C_loss_prev = math.inf
     G_loss_prev = math.inf
     C_loss = 0
     G_loss = 0
+    C_loss_avg = 0
+    G_loss_avg = 0
 
     print_gpu_details()
+
+    # setting the models to train mode
+    critic.train()
+    gen.train()
+
     for epoch in range(EPOCHS):
-        C_loss_avg = 0
-        G_loss_avg = 0
 
         print_memory_utilization()
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
-            critic.train()
-            gen.train()
+
             real = real.to(work_device)
             fixed_noise = torch.rand(
                 real.shape[0], Z_DIM, 1, 1).to(work_device)
 
-            # ~~~~~~~~~~~~~~~~~~~ discriminator loop ~~~~~~~~~~~~~~~~~~~ #
+            # ~~~~~~~~~~~~~~~~~~~ critic loop ~~~~~~~~~~~~~~~~~~~ #
 
             fake = gen(fixed_noise)  # dim of (N,1,W,H)
 
@@ -124,6 +131,7 @@ def training(opt):
 
                 C_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
                 C_loss_avg += C_loss
+
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
                 critic.zero_grad()
@@ -145,6 +153,7 @@ def training(opt):
 
             G_loss = -(torch.mean(fake_predict))
             G_loss_avg += G_loss
+
             # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
             gen.zero_grad()
@@ -153,7 +162,10 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ loading the tensorboard ~~~~~~~~~~~~~~~~~~~ #
 
-            if batch_idx == 0 and epoch >= 1:
+            if batch_idx == len(loader)-1:  # will execute at the last batch
+
+                # ~~~~~~~~~~~~ calculate average loss ~~~~~~~~~~~~~ #
+
                 C_loss_avg = C_loss_avg/(CRITIC_TRAIN_STEPS*BATCH_SIZE)
                 G_loss_avg = G_loss_avg/(BATCH_SIZE)
 
@@ -161,6 +173,8 @@ def training(opt):
                     f"Epoch [{epoch}/{EPOCHS}] Batch {batch_idx}/{len(loader)}"
                     + f"Loss D: {C_loss_avg:.4f}, loss G: {G_loss_avg:.4f}"
                 )
+
+                # ~~~~~~~~~~~~ send data to tensorboard ~~~~~~~~~~~~~ #
 
                 with torch.no_grad():
                     critic.eval()
@@ -185,6 +199,14 @@ def training(opt):
                         'Critic', C_loss, global_step=epoch)
                     loss_writer.add_scalar(
                         'generator', G_loss, global_step=epoch)
+
+                # reset the average loss to zero
+                C_loss_avg = 0
+                G_loss_avg = 0
+
+                # changing back the model to train mode
+                critic.train()
+                gen.train()
 
         # ~~~~~~~~~~~~~~~~~~~ saving the weights ~~~~~~~~~~~~~~~~~~~ #
 
