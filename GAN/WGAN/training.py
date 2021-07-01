@@ -139,7 +139,7 @@ def training(opt):
 
                 # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
-                C_loss = -(torch.mean(real_predict) - torch.mean(fake_predict))
+                C_loss = -(torch.mean(fake_predict) - torch.mean(real_predict))
                 C_loss_avg += C_loss
 
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
