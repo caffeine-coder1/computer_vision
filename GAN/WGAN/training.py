@@ -109,8 +109,9 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ discriminator loop ~~~~~~~~~~~~~~~~~~~ #
 
+            fake = gen(fixed_noise)  # dim of (N,1,W,H)
+
             for _ in range(CRITIC_TRAIN_STEPS):
-                fake = gen(fixed_noise)  # dim of (N,1,W,H)
 
                 # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
 
@@ -126,7 +127,7 @@ def training(opt):
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
                 critic.zero_grad()
-                C_loss.backward()
+                C_loss.backward(retain_graph=True)
                 critic_optim.step()
 
                 # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
@@ -136,12 +137,9 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ generator loop ~~~~~~~~~~~~~~~~~~~ #
 
-            fake = gen(fixed_noise)
-
             # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
 
-            # make it one dimensional array
-            fake_predict = critic(fake).view(-1)
+                # re using the fake_predict from cirtic forward
 
             # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
