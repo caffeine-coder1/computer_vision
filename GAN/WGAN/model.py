@@ -2,7 +2,7 @@ import torch.nn as nn
 from torchsummary import summary
 
 
-class Discriminator(nn.Module):
+class Critic(nn.Module):
     def __init__(self, img_channels, feature_d):
         super().__init__()
         self.net = nn.Sequential(
@@ -17,7 +17,7 @@ class Discriminator(nn.Module):
                           kernel_size=4, stride=2, padding=1),
             nn.Conv2d(feature_d*8, 1,
                       kernel_size=4, stride=2, padding=0),
-            nn.Sigmoid()
+
         )
         self.initialize_weights()
 
@@ -55,7 +55,8 @@ class Faker(nn.Module):
 
     def __block(self, in_channels, out_channels, **kwargs):
 
-        return [nn.ConvTranspose2d(in_channels, out_channels, **kwargs, bias=False),
+        return [nn.ConvTranspose2d(in_channels, out_channels,
+                                   **kwargs, bias=False),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU()]
 
@@ -69,7 +70,7 @@ class Faker(nn.Module):
 
 
 if __name__ == "__main__":
-    disc = Discriminator(1, 128)
+    disc = Critic(1, 128)
     gen = Faker(100, 1, 128)
 
     summary(disc, (1, 64, 64))
