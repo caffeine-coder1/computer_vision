@@ -106,6 +106,10 @@ def training(opt):
 
     for epoch in range(EPOCHS):
 
+        # reset the average loss to zero
+        C_loss_avg = 0
+        G_loss_avg = 0
+
         print_memory_utilization()
 
         for batch_idx, (real, _) in enumerate(tqdm(loader)):
@@ -147,7 +151,8 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
 
-                # re using the fake_predict from cirtic forward
+            # make it one dimensional array
+            fake_predict = critic(fake).view(-1)
 
             # ~~~~~~~~~~~~~~~~~~~ loss ~~~~~~~~~~~~~~~~~~~ #
 
@@ -162,16 +167,17 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ loading the tensorboard ~~~~~~~~~~~~~~~~~~~ #
 
-            if batch_idx == len(loader)-1:  # will execute at the last batch
+            # will execute at every 50 steps
+            if (batch_idx+1) % 50 == 0:
 
                 # ~~~~~~~~~~~~ calculate average loss ~~~~~~~~~~~~~ #
 
-                C_loss_avg = C_loss_avg/(CRITIC_TRAIN_STEPS*BATCH_SIZE)
-                G_loss_avg = G_loss_avg/(BATCH_SIZE)
+                C_loss_avg_ = C_loss_avg/(CRITIC_TRAIN_STEPS*batch_idx)
+                G_loss_avg_ = G_loss_avg/(batch_idx)
 
                 print(
-                    f"Epoch [{epoch}/{EPOCHS}] "
-                    + f"Loss D: {C_loss_avg:.4f}, loss G: {G_loss_avg:.4f}"
+                    f"Epoch [{epoch}/{EPOCHS}] | batch size {batch_idx}"
+                    + f"Loss C: {C_loss_avg_:.4f}, loss G: {G_loss_avg_:.4f}"
                 )
 
                 # ~~~~~~~~~~~~ send data to tensorboard ~~~~~~~~~~~~~ #
@@ -191,20 +197,18 @@ def training(opt):
                     img_grid_real = torchvision.utils.make_grid(
                         data, normalize=True)
 
+                    step = (epoch+1)*(batch_idx+1)
+
                     writer_fake.add_image(
-                        "Mnist Fake Images", img_grid_fake, global_step=epoch
+                        "Mnist Fake Images", img_grid_fake, global_step=step
                     )
                     writer_real.add_image(
-                        "Mnist Real Images", img_grid_real, global_step=epoch
+                        "Mnist Real Images", img_grid_real, global_step=step
                     )
                     loss_writer.add_scalar(
-                        'Critic', C_loss, global_step=epoch)
+                        'Critic', C_loss, global_step=step)
                     loss_writer.add_scalar(
-                        'generator', G_loss, global_step=epoch)
-
-                # reset the average loss to zero
-                C_loss_avg = 0
-                G_loss_avg = 0
+                        'generator', G_loss, global_step=step)
 
                 # changing back the model to train mode
                 critic.train()
