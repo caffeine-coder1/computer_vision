@@ -56,7 +56,7 @@ def training(opt):
     MNIST_data = MNIST(str(opt.data_dir), True, transform=trans, download=True)
 
     loader = DataLoader(MNIST_data, BATCH_SIZE, True,
-                        num_workers=1, pin_memory=True,)
+                        num_workers=2, pin_memory=True,)
 
     # ~~~~~~~~~~~~~~~~~~~ creating tensorboard variables ~~~~~~~~~~~~~~~~~~~ #
 
@@ -186,8 +186,9 @@ def training(opt):
                     critic.eval()
                     gen.eval()
                     if BATCH_SIZE > 32:
-                        fake = gen(fixed_noise[32]).reshape(-1, CHANNELS, H, W)
-                        data = real[32].reshape(-1, CHANNELS, H, W)
+                        fake = gen(fixed_noise[:32]
+                                   ).reshape(-1, CHANNELS, H, W)
+                        data = real[:32].reshape(-1, CHANNELS, H, W)
                     else:
                         fake = gen(fixed_noise).reshape(-1, CHANNELS, H, W)
                         data = real.reshape(-1, CHANNELS, H, W)
