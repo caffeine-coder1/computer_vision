@@ -119,10 +119,16 @@ def training(opt):
                 real.shape[0], Z_DIM, 1, 1).to(work_device)
 
             # ~~~~~~~~~~~~~~~~~~~ critic loop ~~~~~~~~~~~~~~~~~~~ #
-
-            fake = gen(fixed_noise)  # dim of (N,1,W,H)
+            with torch.no_grad():
+                fake = gen(fixed_noise)  # dim of (N,1,W,H)
 
             for _ in range(CRITIC_TRAIN_STEPS):
+
+                critic.zero_grad()
+                # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
+
+                for p in critic.parameters():
+                    p.data.clamp_(-WEIGHT_CLIP, WEIGHT_CLIP)
 
                 # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
 
@@ -138,16 +144,11 @@ def training(opt):
 
                 # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
-                critic.zero_grad()
                 C_loss.backward()
                 critic_optim.step()
 
-                # ~~~~~~~~~~~ weight cliping as per WGAN paper ~~~~~~~~~~ #
-
-                for p in critic.parameters():
-                    p.data.clamp_(-WEIGHT_CLIP, WEIGHT_CLIP)
-
             # ~~~~~~~~~~~~~~~~~~~ generator loop ~~~~~~~~~~~~~~~~~~~ #
+            gen.zero_grad()
 
             # ~~~~~~~~~~~~~~~~~~~ forward ~~~~~~~~~~~~~~~~~~~ #
 
@@ -161,7 +162,6 @@ def training(opt):
 
             # ~~~~~~~~~~~~~~~~~~~ backward ~~~~~~~~~~~~~~~~~~~ #
 
-            gen.zero_grad()
             G_loss.backward()
             gen_optim.step()
 
