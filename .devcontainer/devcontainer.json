@@ -1,0 +1,137 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+	"name": "basic_python",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"build": {
+		// Path is relataive to the devcontainer.json file.
+		"dockerfile": "Dockerfile"
+	},
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.profiles.linux": {
+			"bash": {
+				"path": "bash",
+				"icon": "terminal-bash"
+			}
+		},
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"workbench.startupEditor": "none",
+		"cSpell.enableFiletypes": [
+			"shellscript"
+		],
+		// to do tree settings
+		"todo-tree.highlights.defaultHighlight": {
+			"icon": "alert",
+			"type": "text-and-comment",
+			"foreground": "#ffffff",
+			// "background": "#808080",
+			"opacity": 70,
+			"iconColour": "#0000FF",
+			"gutterIcon": true
+		},
+		"todo-tree.highlights.customHighlight": {
+			"TODO": {
+				"icon": "tools",
+				// "foreground": "#000000",
+				// "background": "#FFFFFF",
+				"iconColour": "#FFFFFF"
+			},
+			"NOTE": {
+				"icon": "note",
+				"foreground": "#e404f8",
+				// "background": "#808080",
+				"iconColour": "#e404f8"
+			},
+			"QUESTION": {
+				"icon": "question",
+				"foreground": "#FFFF00",
+				// "background": "#FFFF00",
+				"iconColour": "#FFFF00"
+			},
+			"FIXME": {
+				"foreground": "#000000",
+				"background": "#FFFF00",
+				"iconColour": "#FFFF00"
+			},
+			"BUG": {
+				"foreground": "#000000",
+				"background": "#FF0000",
+				"iconColour": "#FF0000"
+			},
+			"DEBUG": {
+				"foreground": "#FFFF00",
+				// "background": "#FF0000",
+				"iconColour": "#FFFF00"
+			},
+			"SOLVED": {
+				"icon": "check",
+				"foreground": "#FFFFFF",
+				"background": "#00FF00",
+				"iconColour": "#00FF00"
+			}
+		},
+		"todo-tree.general.tags": [
+			"TODO",
+			"NOTE",
+			"QUESTION",
+			"FIXME",
+			"BUG",
+			"DEBUG",
+			"SOLVED"
+		],
+		"todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS).*(\\n\\s*//\\s{2,}.*)*",
+		"todo-tree.tree.autoRefresh": true,
+		"window.restoreWindows": "none",
+		"indentRainbow.ignoreErrorLanguages": [
+			"markdown",
+			"python",
+			"cpp"
+		],
+	"debug.console.wordWrap": false,
+		"editor.wordWrap": "off",
+		"editor.mouseWheelZoom": true,
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Enabled": true,
+		"editor.formatOnPaste": true,
+		"editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+		"[dockerfile]": {
+			"editor.defaultFormatter": "ms-azuretools.vscode-docker"
+		},
+		"terminal.integrated.fontFamily": "consolas",
+		"terminal.integrated.fontSize": 16,
+		"editor.formatOnSave": true,
+		"jupyter.askForKernelRestart": false,
+		"editor.minimap.enabled": false,
+		"window.commandCenter": false,
+		"terminal.integrated.shellIntegration.enabled": true,
+		"editor.stickyScroll.enabled": true,
+		"editor.foldingStrategy": "indentation",
+		"editor.accessibilitySupport": "off",
+		"git.confirmSync": false
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"oderwat.indent-rainbow",
+		"njpwerner.autodocs",
+		"ms-toolsai.jupyter",
+		"ms-azuretools.vscode-docker",
+		"gruntfuggly.todo-tree",
+		"streetsidesoftware.code-spell-checker"
+	],
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		8901,
+		8902
+	]
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "uname -a",
+	// Configure tool-specific properties.
+	// "customizations": {},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "vscode"
+}
